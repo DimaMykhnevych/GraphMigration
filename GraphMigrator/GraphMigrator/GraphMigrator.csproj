@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>63d24195-915a-4367-b431-e4a30ccce208</UserSecretsId>
   </PropertyGroup>
 
 	<ItemGroup>
@@ -12,9 +13,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Algorithms\Algorithms.csproj" />
+	  <ProjectReference Include="..\GraphMigrator.Algorithms\GraphMigrator.Algorithms.csproj" />
 	</ItemGroup>
-
+	
 	<ItemGroup>
 	  <None Update="appSettings.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

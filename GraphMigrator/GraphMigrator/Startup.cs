@@ -1,4 +1,5 @@
-﻿using Algorithms.RelationalSchemaExtractors.MSSQLExtractorN;
+﻿using GraphMigrator.Algorithms.RelationalSchemaExtractors;
+using GraphMigrator.Domain.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,7 +13,10 @@ public class Startup(IConfiguration configuration)
     {
         services.AddTransient<IApplicationRunner, ApplicationRunner>();
 
-        services.AddTransient<IMSSQLExtractor, MSSQLExtractor>();
+        services.AddTransient<IRelationalSchemaExtractor, MSSQLExtractor>();
+
+        // Configuration Options
+        services.Configure<SourceDataSourceConfiguration>(Configuration.GetSection(nameof(SourceDataSourceConfiguration)));
     }
 }
 
