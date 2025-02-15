@@ -1,4 +1,5 @@
-﻿using GraphMigrator.Algorithms.Neo4jDataLayer;
+﻿using GraphMigrator.Algorithms.ImprovedMigrationAlgorithmN;
+using GraphMigrator.Algorithms.Neo4jDataLayer;
 using GraphMigrator.Algorithms.RelationalSchemaExtractors;
 using GraphMigrator.Domain.Configuration;
 using Microsoft.Extensions.Configuration;
@@ -18,6 +19,8 @@ public class Startup(IConfiguration configuration)
         services.AddTransient<IRelationalSchemaExtractor, MSSQLExtractor>();
 
         services.AddTransient<INeo4jDataAccess, Neo4jDataAccess>();
+
+        services.AddTransient<IImprovedMigrationAlgorithm, ImprovedMigrationAlgorithm>();
 
         // Configuration Options
         services.Configure<SourceDataSourceConfiguration>(Configuration.GetSection(nameof(SourceDataSourceConfiguration)));

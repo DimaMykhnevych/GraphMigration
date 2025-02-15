@@ -66,7 +66,7 @@ public class Neo4jDataAccess : INeo4jDataAccess
     /// <summary>
     /// Execute write transaction
     /// </summary>
-    public async Task<T> ExecuteWriteTransactionAsync<T>(string query, IDictionary<string, object> parameters = null)
+    public async Task<T> ExecuteWriteTransactionAsync<T>(string query, object parameters = null)
     {
         try
         {
@@ -78,7 +78,7 @@ public class Neo4jDataAccess : INeo4jDataAccess
 
                 var res = await tx.RunAsync(query, parameters);
 
-                scalar = (await res.SingleAsync())[0].As<T>();
+                //scalar = (await res.SingleAsync())[0].As<T>();
 
                 return scalar;
             });
