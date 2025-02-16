@@ -78,7 +78,7 @@ public class Neo4jDataAccess : INeo4jDataAccess
 
                 var res = await tx.RunAsync(query, parameters);
 
-                //scalar = (await res.SingleAsync())[0].As<T>();
+                scalar = (await res.SingleAsync())[0].As<T>();
 
                 return scalar;
             });
