@@ -1,5 +1,6 @@
 ﻿using GraphMigrator.Algorithms.ImprovedMigrationAlgorithmN;
 using GraphMigrator.Algorithms.Neo4jDataLayer;
+using GraphMigrator.Algorithms.Rel2Graph;
 using GraphMigrator.Algorithms.RelationalSchemaExtractors;
 using GraphMigrator.Domain.Configuration;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +22,8 @@ public class Startup(IConfiguration configuration)
         services.AddTransient<INeo4jDataAccess, Neo4jDataAccess>();
 
         services.AddTransient<IImprovedMigrationAlgorithm, ImprovedMigrationAlgorithm>();
+
+        services.AddTransient<IRel2GraphAlgorithm, Rel2GraphAlgorithm>();
 
         // Configuration Options
         services.Configure<SourceDataSourceConfiguration>(Configuration.GetSection(nameof(SourceDataSourceConfiguration)));

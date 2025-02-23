@@ -3,72 +3,48 @@ using GraphMigrator.Algorithms.RelationalSchemaExtractors;
 using GraphMigrator.Domain.Configuration;
 using GraphMigrator.Domain.Entities;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace GraphMigrator.Algorithms.ImprovedMigrationAlgorithmN;
+namespace GraphMigrator.Algorithms.Rel2Graph;
 
-// TODO consider complex primary keys ??
-// TODO consider user settings (user can make table with three foreign keys as entity table and vice versa)
-// TODO create indices
-public class ImprovedMigrationAlgorithm(
+public class Rel2GraphAlgorithm(
     IRelationalSchemaExtractor relationalSchemaExtractor,
     IOptions<SourceDataSourceConfiguration> configurationOptions,
-    IServiceProvider serviceProvider) : IImprovedMigrationAlgorithm
+    INeo4jDataAccess neo4JDataAccess) : IRel2GraphAlgorithm
 {
     private readonly IRelationalSchemaExtractor _relationalSchemaExtractor = relationalSchemaExtractor;
     private readonly SourceDataSourceConfiguration configuration = configurationOptions.Value;
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly INeo4jDataAccess _neo4JDataAccess = neo4JDataAccess;
 
     public async Task MigrateToGraphDatabaseAsync()
     {
-#if DEBUG
-        await MigrateToGraphDatabaseDebugVersion();
-#else
         var schema = await _relationalSchemaExtractor.GetSchema();
 
         var (entityTables, relationshipTables) = ClassifyTables(schema);
 
-        var entityTasks = entityTables.Select(CreateNodesForTableAsync);
-        await Task.WhenAll(entityTasks);
+        await using var sqlConnection = new SqlConnection(configurationOptions.Value.ConnectionString);
+        await sqlConnection.OpenAsync();
 
-        var relationshipTasks = relationshipTables.Select(CreateRelationshipsForTableAsync);
-        await Task.WhenAll(relationshipTasks);
-
-        var foreignKeyTasks = entityTables.SelectMany(table =>
-            table.ForeignKeys.Select(fk =>
-                CreateRelationshipsForForeignKeyAsync(table, fk)));
-        await Task.WhenAll(foreignKeyTasks);
-#endif
-    }
-
-    private async Task MigrateToGraphDatabaseDebugVersion()
-    {
-        var schema = await _relationalSchemaExtractor.GetSchema();
-
-        var (entityTables, relationshipTables) = ClassifyTables(schema);
-
-        foreach(var  entityTable in entityTables)
+        foreach (var table in entityTables)
         {
-            await CreateNodesForTableAsync(entityTable);
+            await CreateNodesForTableAsync(sqlConnection, table);
         }
 
         foreach (var table in relationshipTables)
         {
-            await CreateRelationshipsForTableAsync(table);
+            await CreateRelationshipsFromLinkingTableAsync(sqlConnection, table);
         }
 
-        var foreignKeyTasks = entityTables.SelectMany(table => table.ForeignKeys);
         foreach (var table in entityTables)
         {
             foreach (var foreignKey in table.ForeignKeys)
             {
-                await CreateRelationshipsForForeignKeyAsync(table, foreignKey);
+                await CreateAdditionalRelationshipsAsync(sqlConnection, table, foreignKey);
             }
         }
     }
 
-    private async Task CreateNodesForTableAsync(TableSchema table)
+    private async Task CreateNodesForTableAsync(SqlConnection sqlConnection, TableSchema table)
     {
         var columnsToInclude = table.Columns
             .Where(c => !table.ForeignKeys
@@ -77,9 +53,6 @@ public class ImprovedMigrationAlgorithm(
 
         var columnsStr = string.Join(", ", columnsToInclude);
         var query = $"SELECT {columnsStr} FROM {table.Name}";
-
-        await using var sqlConnection = new SqlConnection(configuration.ConnectionString);
-        await sqlConnection.OpenAsync();
 
         using var command = new SqlCommand(query, sqlConnection);
         using var reader = await command.ExecuteReaderAsync();
@@ -96,16 +69,14 @@ public class ImprovedMigrationAlgorithm(
 
             var cypher = $@"CREATE (n:{table.Name} $props) RETURN true";
 
-            var neo4JDataAccess = _serviceProvider.GetRequiredService<INeo4jDataAccess>();
-
-            await neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
+            await _neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
             {
                 props = properties
             });
         }
     }
 
-    private async Task CreateRelationshipsForTableAsync(TableSchema table)
+    private async Task CreateRelationshipsFromLinkingTableAsync(SqlConnection sqlConnection, TableSchema table)
     {
         var nonForeignKeyColumns = table.Columns
             .Where(c => !table.ForeignKeys.Any(fk => fk.ColumnName == c.Name))
@@ -113,9 +84,6 @@ public class ImprovedMigrationAlgorithm(
 
         var columnsStr = string.Join(", ", table.Columns.Select(c => c.Name));
         var query = $"SELECT {columnsStr} FROM {table.Name}";
-
-        await using var sqlConnection = new SqlConnection(configuration.ConnectionString);
-        await sqlConnection.OpenAsync();
 
         using var command = new SqlCommand(query, sqlConnection);
         using var reader = await command.ExecuteReaderAsync();
@@ -138,9 +106,7 @@ public class ImprovedMigrationAlgorithm(
                 MATCH (target:{fk2.ReferencedTableName} {{{fk2.ReferencedColumnName}: $targetId}})
                 CREATE (source)-[r:{table.Name} $props]->(target) RETURN true";
 
-            var neo4JDataAccess = _serviceProvider.GetRequiredService<INeo4jDataAccess>();
-
-            await neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
+            await _neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
             {
                 sourceId = reader[fk1.ColumnName],
                 targetId = reader[fk2.ColumnName],
@@ -149,13 +115,10 @@ public class ImprovedMigrationAlgorithm(
         }
     }
 
-    private async Task CreateRelationshipsForForeignKeyAsync(TableSchema table, ForeignKeySchema fk)
+    private async Task CreateAdditionalRelationshipsAsync(SqlConnection sqlConnection, TableSchema table, ForeignKeySchema fk)
     {
         var primaryIdColumnName = table.PrimaryKeys[0];
         var query = $"SELECT {primaryIdColumnName}, {fk.ColumnName} FROM {table.Name}";
-
-        await using var sqlConnection = new SqlConnection(configuration.ConnectionString);
-        await sqlConnection.OpenAsync();
 
         using var command = new SqlCommand(query, sqlConnection);
         using var reader = await command.ExecuteReaderAsync();
@@ -170,9 +133,7 @@ public class ImprovedMigrationAlgorithm(
                 MATCH (target:{fk.ReferencedTableName} {{{fk.ReferencedColumnName}: $targetId}})
                 CREATE (source)-[r:HAS_{table.Name}_{fk.ReferencedTableName}]->(target) RETURN true";
 
-            var neo4JDataAccess = _serviceProvider.GetRequiredService<INeo4jDataAccess>();
-
-            await neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
+            await _neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
             {
                 sourceId,
                 targetId
@@ -187,13 +148,29 @@ public class ImprovedMigrationAlgorithm(
 
         foreach (var table in schema.Tables)
         {
-            if (IsRelationshipTable(table))
-                relationshipTables.Add(table);
-            else
+            if (IsEntityTable(table))
+            {
                 entityTables.Add(table);
+            }
+            else if (IsRelationshipTable(table))
+            {
+                relationshipTables.Add(table);
+            }
+            else
+            {
+                entityTables.Add(table);
+            }
         }
 
         return (entityTables, relationshipTables);
+    }
+
+    private static bool IsEntityTable(TableSchema table)
+    {
+        return
+            table.ForeignKeys.Count == 0 ||
+            table.ForeignKeys.Count == 1 || table.ForeignKeys.Count > 2 ||
+            (table.ForeignKeys.Count == 2 && table.PrimaryKeys.Count == 1);
     }
 
     private static bool IsRelationshipTable(TableSchema table)
@@ -201,13 +178,8 @@ public class ImprovedMigrationAlgorithm(
         if (table.ForeignKeys.Count != 2)
             return false;
 
-        if (table.PrimaryKeys.Count == 1)
-            return table.Columns.Count <= 4;
-
-        if (table.PrimaryKeys.Count == 2)
-            return table.Columns.Count <= 3;
-
-        return false;
+        return
+            table.PrimaryKeys.Count != 1 ||
+            table.PrimaryKeys.All(pk => table.ForeignKeys.Any(fk => fk.ColumnName == pk));
     }
 }
-

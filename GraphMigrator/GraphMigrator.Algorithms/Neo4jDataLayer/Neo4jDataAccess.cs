@@ -91,6 +91,22 @@ public class Neo4jDataAccess : INeo4jDataAccess
         }
     }
 
+    public async Task DeleteSchemaWithData()
+    {
+        var deleteQuery = "MATCH (n) DETACH DELETE n";
+        try
+        {
+            await _session.ExecuteWriteAsync(async tx =>
+            {
+                await tx.RunAsync(deleteQuery, new Dictionary<string, object>());
+            });
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
     /// <summary>
     /// Execute read transaction as an asynchronous operation.
     /// </summary>
