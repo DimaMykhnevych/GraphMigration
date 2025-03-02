@@ -22,9 +22,9 @@ public class ImprovedMigrationAlgorithm(
 
     public async Task MigrateToGraphDatabaseAsync()
     {
-#if DEBUG
-        await MigrateToGraphDatabaseDebugVersion();
-#else
+//#if !DEBUG
+//        await MigrateToGraphDatabaseDebugVersion();
+//#else
         var schema = await _relationalSchemaExtractor.GetSchema();
 
         var (entityTables, relationshipTables) = ClassifyTables(schema);
@@ -39,7 +39,7 @@ public class ImprovedMigrationAlgorithm(
             table.ForeignKeys.Select(fk =>
                 CreateRelationshipsForForeignKeyAsync(table, fk)));
         await Task.WhenAll(foreignKeyTasks);
-#endif
+//#endif
     }
 
     private async Task MigrateToGraphDatabaseDebugVersion()
@@ -76,7 +76,7 @@ public class ImprovedMigrationAlgorithm(
             .Select(c => c.Name);
 
         var columnsStr = string.Join(", ", columnsToInclude);
-        var query = $"SELECT {columnsStr} FROM {table.Name}";
+        var query = $"SELECT {columnsStr} FROM [{table.Name}]";
 
         await using var sqlConnection = new SqlConnection(configuration.ConnectionString);
         await sqlConnection.OpenAsync();
@@ -91,7 +91,7 @@ public class ImprovedMigrationAlgorithm(
             {
                 var value = reader[column];
                 if (value != DBNull.Value)
-                    properties[column] = value;
+                    properties[column] = GetValue(value);
             }
 
             var cypher = $@"CREATE (n:{table.Name} $props) RETURN true";
@@ -112,7 +112,7 @@ public class ImprovedMigrationAlgorithm(
             .Select(c => c.Name);
 
         var columnsStr = string.Join(", ", table.Columns.Select(c => c.Name));
-        var query = $"SELECT {columnsStr} FROM {table.Name}";
+        var query = $"SELECT {columnsStr} FROM [{table.Name}]";
 
         await using var sqlConnection = new SqlConnection(configuration.ConnectionString);
         await sqlConnection.OpenAsync();
@@ -127,7 +127,7 @@ public class ImprovedMigrationAlgorithm(
             {
                 var value = reader[column];
                 if (value != DBNull.Value)
-                    properties[column] = value;
+                    properties[column] = GetValue(value);
             }
 
             var fk1 = table.ForeignKeys[0];
@@ -142,8 +142,8 @@ public class ImprovedMigrationAlgorithm(
 
             await neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
             {
-                sourceId = reader[fk1.ColumnName],
-                targetId = reader[fk2.ColumnName],
+                sourceId = GetValue(reader[fk1.ColumnName]),
+                targetId = GetValue(reader[fk2.ColumnName]),
                 props = properties
             });
         }
@@ -152,7 +152,7 @@ public class ImprovedMigrationAlgorithm(
     private async Task CreateRelationshipsForForeignKeyAsync(TableSchema table, ForeignKeySchema fk)
     {
         var primaryIdColumnName = table.PrimaryKeys[0];
-        var query = $"SELECT {primaryIdColumnName}, {fk.ColumnName} FROM {table.Name}";
+        var query = $"SELECT {primaryIdColumnName}, {fk.ColumnName} FROM [{table.Name}]";
 
         await using var sqlConnection = new SqlConnection(configuration.ConnectionString);
         await sqlConnection.OpenAsync();
@@ -162,8 +162,8 @@ public class ImprovedMigrationAlgorithm(
 
         while (await reader.ReadAsync())
         {
-            var sourceId = reader[primaryIdColumnName];
-            var targetId = reader[fk.ColumnName];
+            var sourceId = GetValue(reader[primaryIdColumnName]);
+            var targetId = GetValue(reader[fk.ColumnName]);
 
             var cypher = $@"
                 MATCH (source:{table.Name} {{{primaryIdColumnName}: $sourceId}})
@@ -208,6 +208,11 @@ public class ImprovedMigrationAlgorithm(
             return table.Columns.Count <= 3;
 
         return false;
+    }
+
+    private static object GetValue(object value)
+    {
+        return value is Guid ? value.ToString() : value;
     }
 }
 

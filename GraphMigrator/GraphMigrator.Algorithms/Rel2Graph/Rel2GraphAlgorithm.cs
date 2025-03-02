@@ -52,7 +52,7 @@ public class Rel2GraphAlgorithm(
             .Select(c => c.Name);
 
         var columnsStr = string.Join(", ", columnsToInclude);
-        var query = $"SELECT {columnsStr} FROM {table.Name}";
+        var query = $"SELECT {columnsStr} FROM [{table.Name}]";
 
         using var command = new SqlCommand(query, sqlConnection);
         using var reader = await command.ExecuteReaderAsync();
@@ -64,7 +64,10 @@ public class Rel2GraphAlgorithm(
             {
                 var value = reader[column];
                 if (value != DBNull.Value)
-                    properties[column] = value;
+                {
+                    properties[column] = GetValue(value);
+                }
+
             }
 
             var cypher = $@"CREATE (n:{table.Name} $props) RETURN true";
@@ -83,7 +86,7 @@ public class Rel2GraphAlgorithm(
             .Select(c => c.Name);
 
         var columnsStr = string.Join(", ", table.Columns.Select(c => c.Name));
-        var query = $"SELECT {columnsStr} FROM {table.Name}";
+        var query = $"SELECT {columnsStr} FROM [{table.Name}]";
 
         using var command = new SqlCommand(query, sqlConnection);
         using var reader = await command.ExecuteReaderAsync();
@@ -95,7 +98,7 @@ public class Rel2GraphAlgorithm(
             {
                 var value = reader[column];
                 if (value != DBNull.Value)
-                    properties[column] = value;
+                    properties[column] = GetValue(value);
             }
 
             var fk1 = table.ForeignKeys[0];
@@ -108,8 +111,8 @@ public class Rel2GraphAlgorithm(
 
             await _neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
             {
-                sourceId = reader[fk1.ColumnName],
-                targetId = reader[fk2.ColumnName],
+                sourceId = GetValue(reader[fk1.ColumnName]),
+                targetId = GetValue(reader[fk2.ColumnName]),
                 props = properties
             });
         }
@@ -118,15 +121,15 @@ public class Rel2GraphAlgorithm(
     private async Task CreateAdditionalRelationshipsAsync(SqlConnection sqlConnection, TableSchema table, ForeignKeySchema fk)
     {
         var primaryIdColumnName = table.PrimaryKeys[0];
-        var query = $"SELECT {primaryIdColumnName}, {fk.ColumnName} FROM {table.Name}";
+        var query = $"SELECT {primaryIdColumnName}, {fk.ColumnName} FROM [{table.Name}]";
 
         using var command = new SqlCommand(query, sqlConnection);
         using var reader = await command.ExecuteReaderAsync();
 
         while (await reader.ReadAsync())
         {
-            var sourceId = reader[primaryIdColumnName];
-            var targetId = reader[fk.ColumnName];
+            var sourceId = GetValue(reader[primaryIdColumnName]);
+            var targetId = GetValue(reader[fk.ColumnName]);
 
             var cypher = $@"
                 MATCH (source:{table.Name} {{{primaryIdColumnName}: $sourceId}})
@@ -181,5 +184,10 @@ public class Rel2GraphAlgorithm(
         return
             table.PrimaryKeys.Count != 1 ||
             table.PrimaryKeys.All(pk => table.ForeignKeys.Any(fk => fk.ColumnName == pk));
+    }
+
+    private static object GetValue(object value)
+    {
+        return value is Guid ? value.ToString() : value;
     }
 }
