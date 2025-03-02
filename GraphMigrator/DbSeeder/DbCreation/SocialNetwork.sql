@@ -83,7 +83,6 @@ GO
 CREATE TABLE [Friendship] (
   [FriendshipId] UNIQUEIDENTIFIER PRIMARY KEY,
   [Status] int,
-  [CreationDate] DateTime,
   [InitiatorId] UNIQUEIDENTIFIER,
   [RequestedFriendId] UNIQUEIDENTIFIER
 )

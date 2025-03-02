@@ -134,7 +134,7 @@ public class Rel2GraphAlgorithm(
             var cypher = $@"
                 MATCH (source:{table.Name} {{{primaryIdColumnName}: $sourceId}})
                 MATCH (target:{fk.ReferencedTableName} {{{fk.ReferencedColumnName}: $targetId}})
-                CREATE (source)-[r:HAS_{table.Name}_{fk.ReferencedTableName}]->(target) RETURN true";
+                CREATE (target)-[r:HAS_{fk.ReferencedTableName}_{table.Name}]->(source) RETURN true";
 
             await _neo4JDataAccess.ExecuteWriteTransactionAsync<bool>(cypher, new
             {
