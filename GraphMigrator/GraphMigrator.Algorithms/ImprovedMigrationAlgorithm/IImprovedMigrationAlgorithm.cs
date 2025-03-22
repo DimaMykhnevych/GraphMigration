@@ -1,6 +1,6 @@
 ﻿namespace GraphMigrator.Algorithms.ImprovedMigrationAlgorithmN;
 
-public interface IImprovedMigrationAlgorithm
+public interface IImprovedMigrationAlgorithm : IDisposable
 {
-    Task MigrateToGraphDatabaseAsync();
+    Task MigrateToGraphDatabaseAsync(CancellationToken cancellationToken);
 }

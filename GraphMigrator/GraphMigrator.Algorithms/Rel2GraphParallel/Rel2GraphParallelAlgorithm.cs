@@ -7,12 +7,9 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace GraphMigrator.Algorithms.ImprovedMigrationAlgorithmN;
+namespace GraphMigrator.Algorithms.Rel2GraphParallel;
 
-// TODO consider complex primary keys ??
-// TODO consider user settings (user can make table with three foreign keys as entity table and vice versa)
-// TODO create indices
-public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
+public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
 {
     private readonly IRelationalSchemaExtractor _relationalSchemaExtractor;
     private readonly SourceDataSourceConfiguration _configuration;
@@ -23,7 +20,7 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
     private readonly int _maxConcurrentNeo4jWrites;
     private readonly int _batchSize;
 
-    public ImprovedMigrationAlgorithm(
+    public Rel2GraphParallelAlgorithm(
         IRelationalSchemaExtractor relationalSchemaExtractor,
         IOptions<SourceDataSourceConfiguration> configurationOptions,
         IServiceProvider serviceProvider)
@@ -32,7 +29,6 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
         _configuration = configurationOptions.Value;
         _serviceProvider = serviceProvider;
 
-        // Configure concurrency limits
         _maxConcurrentDbConnections = Environment.ProcessorCount * 2;
         _maxConcurrentNeo4jWrites = Environment.ProcessorCount * 4;
         _batchSize = 1000;
@@ -48,7 +44,7 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
 
         await ProcessTablesInParallel(entityTables, CreateNodesForTableAsync, cancellationToken);
 
-        await ProcessTablesInParallel(relationshipTables, CreateRelationshipsForTableAsync, cancellationToken);
+        await ProcessTablesInParallel(relationshipTables, CreateRelationshipsFromLinkingTableAsync, cancellationToken);
 
         var foreignKeyPairs = entityTables
             .SelectMany(table => table.ForeignKeys.Select(fk => new ForeignKeyPair
@@ -56,7 +52,7 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
                 Table = table,
                 ForeignKey = fk
             }))
-            .ToList();
+        .ToList();
 
         await ProcessForeignKeysInParallel(foreignKeyPairs, cancellationToken);
     }
@@ -129,7 +125,7 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
                     await _dbConnectionSemaphore.WaitAsync(cancellationToken);
                     try
                     {
-                        await CreateRelationshipsForForeignKeyAsync(pair.Table, pair.ForeignKey, cancellationToken);
+                        await CreateAdditionalRelationshipsAsync(pair.Table, pair.ForeignKey, cancellationToken);
                     }
                     finally
                     {
@@ -142,7 +138,7 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
         await Task.WhenAll(tasks);
     }
 
-    private async Task CreateNodesForTableAsync(TableSchema table, CancellationToken cancellationToken = default)
+    private async Task CreateNodesForTableAsync(TableSchema table, CancellationToken cancellationToken)
     {
         var columnsToInclude = table.Columns
             .Where(c => !table.ForeignKeys
@@ -226,7 +222,7 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
         }
     }
 
-    private async Task CreateRelationshipsForTableAsync(TableSchema table, CancellationToken cancellationToken = default)
+    private async Task CreateRelationshipsFromLinkingTableAsync(TableSchema table, CancellationToken cancellationToken)
     {
         var nonForeignKeyColumns = table.Columns
             .Where(c => !table.ForeignKeys.Any(fk => fk.ColumnName == c.Name))
@@ -324,10 +320,10 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
         }
     }
 
-    private async Task CreateRelationshipsForForeignKeyAsync(
+    private async Task CreateAdditionalRelationshipsAsync(
         TableSchema table,
         ForeignKeySchema fk,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var primaryIdColumnName = table.PrimaryKeys[0];
         var query = $"SELECT {primaryIdColumnName}, {fk.ColumnName} FROM [{table.Name}]";
@@ -419,13 +415,29 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
 
         foreach (var table in schema.Tables)
         {
-            if (IsRelationshipTable(table))
-                relationshipTables.Add(table);
-            else
+            if (IsEntityTable(table))
+            {
                 entityTables.Add(table);
+            }
+            else if (IsRelationshipTable(table))
+            {
+                relationshipTables.Add(table);
+            }
+            else
+            {
+                entityTables.Add(table);
+            }
         }
 
         return (entityTables, relationshipTables);
+    }
+
+    private static bool IsEntityTable(TableSchema table)
+    {
+        return
+            table.ForeignKeys.Count == 0 ||
+            table.ForeignKeys.Count == 1 || table.ForeignKeys.Count > 2 ||
+            (table.ForeignKeys.Count == 2 && table.PrimaryKeys.Count == 1);
     }
 
     private static bool IsRelationshipTable(TableSchema table)
@@ -433,13 +445,9 @@ public class ImprovedMigrationAlgorithm : IImprovedMigrationAlgorithm
         if (table.ForeignKeys.Count != 2)
             return false;
 
-        if (table.PrimaryKeys.Count == 1)
-            return table.Columns.Count <= 4;
-
-        if (table.PrimaryKeys.Count == 2)
-            return table.Columns.Count <= 3;
-
-        return false;
+        return
+            table.PrimaryKeys.Count != 1 ||
+            table.PrimaryKeys.All(pk => table.ForeignKeys.Any(fk => fk.ColumnName == pk));
     }
 
     private static object GetValue(object value)
