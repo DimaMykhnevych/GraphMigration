@@ -551,13 +551,12 @@ public class SocialNetworkDatabaseSeeder
             // Status: 0 = Pending, 1 = Accepted, 2 = Rejected
             int status = _random.Next(3);
 
-            string sql = @"INSERT INTO [Friendship] ([FriendshipId], [Status], [CreationDate], [InitiatorId], [RequestedFriendId])
-                                  VALUES (@FriendshipId, @Status, @CreationDate, @InitiatorId, @RequestedFriendId)";
+            string sql = @"INSERT INTO [Friendship] ([FriendshipId], [Status], [InitiatorId], [RequestedFriendId])
+                                  VALUES (@FriendshipId, @Status, @InitiatorId, @RequestedFriendId)";
 
             using var command = new SqlCommand(sql, connection, transaction);
             command.Parameters.AddWithValue("@FriendshipId", Guid.NewGuid());
             command.Parameters.AddWithValue("@Status", status);
-            command.Parameters.AddWithValue("@CreationDate", DateTime.Now.AddDays(-_random.Next(365)));
             command.Parameters.AddWithValue("@InitiatorId", initiatorId);
             command.Parameters.AddWithValue("@RequestedFriendId", requestedId);
             await command.ExecuteNonQueryAsync();

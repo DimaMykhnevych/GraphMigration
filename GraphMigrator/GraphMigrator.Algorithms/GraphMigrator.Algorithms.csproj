@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.1" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.1" />
     <PackageReference Include="Neo4j.Driver" Version="5.27.0" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.3" />
   </ItemGroup>
 
   <ItemGroup>
