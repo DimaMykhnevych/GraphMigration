@@ -25,6 +25,8 @@ export class QueryComparisonComponent implements OnInit {
     this.queryForm = this.fb.group({
       sqlQuery: ['', Validators.required],
       cypherQuery: ['', Validators.required],
+      fractionalDigitsNumber: [null],
+      resultsCountToReturn: [null],
     });
   }
 

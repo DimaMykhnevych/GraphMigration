@@ -55,6 +55,41 @@
         </mat-card-content>
       </mat-card>
 
+      <!-- Settings Card -->
+      <mat-card class="my-3">
+        <mat-card-header>
+          <mat-card-title>Comparison Settings</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="queryForm" class="row">
+            <div class="col-md-6">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Fractional Digits to Compare</mat-label>
+                <input
+                  matInput
+                  type="number"
+                  formControlName="fractionalDigitsNumber"
+                  placeholder="Leave empty for exact match"
+                />
+                <mat-hint>Number of decimal places to compare</mat-hint>
+              </mat-form-field>
+            </div>
+            <div class="col-md-6">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Results to Return</mat-label>
+                <input
+                  matInput
+                  type="number"
+                  formControlName="resultsCountToReturn"
+                  placeholder="Leave empty for all results"
+                />
+                <mat-hint>Limit number of returned rows</mat-hint>
+              </mat-form-field>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
       <!-- Run Button -->
       <div class="text-center my-4">
         <button
@@ -105,6 +140,18 @@
           </div>
         </mat-card-content>
       </mat-card>
+    </div>
+  </div>
+
+  <!-- Query Results Tables -->
+  <div class="row mt-4" *ngIf="comparisonResult">
+    <div class="col-12">
+      <app-query-results-table
+        [sqlResults]="comparisonResult.sqlResults"
+        [cypherResults]="comparisonResult.cypherResults"
+        [areIdentical]="comparisonResult.areIdentical"
+      >
+      </app-query-results-table>
     </div>
   </div>
 </div>

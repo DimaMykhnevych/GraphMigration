@@ -11,9 +11,15 @@ import { HttpClientModule } from '@angular/common/http';
 
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { QueryComparisonComponent } from './components/query-comparison/query-comparison.component';
+import { QueryResultsTableComponent } from './components/query-results-table/query-results-table.component';
 
 @NgModule({
-  declarations: [AppComponent, NavbarComponent, QueryComparisonComponent],
+  declarations: [
+    AppComponent,
+    NavbarComponent,
+    QueryComparisonComponent,
+    QueryResultsTableComponent,
+  ],
   imports: [
     BrowserModule,
     AppRoutingModule,

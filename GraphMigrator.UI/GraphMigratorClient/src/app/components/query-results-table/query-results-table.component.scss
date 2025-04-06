@@ -1,0 +1,45 @@
+.results-section {
+    margin-top: 20px;
+    margin-bottom: 40px;
+  }
+  
+  .table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+  }
+  
+  .table-container-full {
+    max-height: 600px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+  }
+  
+  .highlight-different {
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 217, 0, 0.1);
+      pointer-events: none;
+    }
+  }
+  
+  td.mat-cell, th.mat-header-cell {
+    padding: 8px 16px;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .badge {
+    font-size: 0.8rem;
+    vertical-align: middle;
+    margin-left: 8px;
+  }
