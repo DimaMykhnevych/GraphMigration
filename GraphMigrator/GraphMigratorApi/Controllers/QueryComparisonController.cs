@@ -20,9 +20,9 @@ namespace GraphMigratorApi.Controllers
         {
             var result = await _queryComparisonAlgorithm
                 .CompareQueryResults(
-                getQueryComparisonResultDto.SqlQuery,
-                getQueryComparisonResultDto.CypherQuery,
-                getQueryComparisonResultDto.FractionalDigitsNumber);
+                    getQueryComparisonResultDto.SqlQuery,
+                    getQueryComparisonResultDto.CypherQuery,
+                    getQueryComparisonResultDto.FractionalDigitsNumber);
 
             return Ok(result);
         }
