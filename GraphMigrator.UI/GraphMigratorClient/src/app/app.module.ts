@@ -6,7 +6,9 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MaterialModule } from './layout';
 
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { QueryComparisonComponent } from './components/query-comparison/query-comparison.component';
 
@@ -18,6 +20,8 @@ import { QueryComparisonComponent } from './components/query-comparison/query-co
     BrowserAnimationsModule,
     FormsModule,
     MaterialModule,
+    ReactiveFormsModule,
+    HttpClientModule,
   ],
   providers: [],
   bootstrap: [AppComponent],

@@ -20,6 +20,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTreeModule } from '@angular/material/tree';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 
 const MATERIAL_MODULES = [
   MatButtonModule,
@@ -43,6 +45,8 @@ const MATERIAL_MODULES = [
   MatTableModule,
   MatListModule,
   MatSelectModule,
+  MatProgressBarModule,
+  MatSnackBarModule,
 ];
 
 @NgModule({

@@ -1,1 +1,110 @@
-<p>Test</p>
+<div class="main container">
+  <h1 class="text-center">SQL and Cypher Query Comparison Tool</h1>
+
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>SQL Query</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="queryForm">
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label>SQL Query</mat-label>
+              <textarea
+                matInput
+                formControlName="sqlQuery"
+                rows="10"
+                placeholder="SELECT * FROM YourTable"
+                class="code-font"
+              ></textarea>
+              <mat-error
+                *ngIf="queryForm.get('sqlQuery')?.hasError('required')"
+              >
+                SQL query is required
+              </mat-error>
+            </mat-form-field>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="col-md-6">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Cypher Query</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="queryForm">
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label>Cypher Query</mat-label>
+              <textarea
+                matInput
+                formControlName="cypherQuery"
+                rows="10"
+                placeholder="MATCH (n) RETURN n LIMIT 10"
+                class="code-font"
+              ></textarea>
+              <mat-error
+                *ngIf="queryForm.get('cypherQuery')?.hasError('required')"
+              >
+                Cypher query is required
+              </mat-error>
+            </mat-form-field>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Run Button -->
+      <div class="text-center my-4">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="compareQueries()"
+          [disabled]="isLoading || queryForm.invalid"
+          class="comparison-button"
+        >
+          <mat-icon>compare_arrows</mat-icon> Compare Queries
+        </button>
+        <mat-progress-bar
+          mode="indeterminate"
+          *ngIf="isLoading"
+          class="mt-2"
+        ></mat-progress-bar>
+      </div>
+
+      <!-- Results -->
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Comparison Results</mat-card-title>
+          <button
+            mat-icon-button
+            color="warn"
+            (click)="clearResults()"
+            *ngIf="logMessages.length > 0"
+          >
+            <mat-icon>clear</mat-icon>
+          </button>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="results-container">
+            <div
+              *ngIf="logMessages.length === 0"
+              class="text-center py-5 text-muted"
+            >
+              <mat-icon class="large-icon">info</mat-icon>
+              <p>Run a comparison to see results</p>
+            </div>
+
+            <div *ngFor="let log of logMessages" class="log-message">
+              <span class="timestamp">{{
+                log.timestamp | date : "HH:mm:ss"
+              }}</span>
+              <span [ngClass]="getLogClass(log.type)">{{ log.message }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
