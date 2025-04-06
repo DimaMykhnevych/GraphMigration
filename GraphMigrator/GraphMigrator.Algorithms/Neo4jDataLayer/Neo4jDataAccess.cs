@@ -30,9 +30,9 @@ public class Neo4jDataAccess : INeo4jDataAccess
     /// <summary>
     /// Execute read dictionary as an asynchronous operation.
     /// </summary>
-    public async Task<List<Dictionary<string, object>>> ExecuteReadDictionaryAsync(string query, string returnObjectKey, IDictionary<string, object> parameters = null)
+    public async Task<List<Dictionary<string, object>>> ExecuteReadDictionaryAsync(string query, IDictionary<string, object> parameters = null)
     {
-        return await ExecuteReadTransactionAsync<Dictionary<string, object>>(query, returnObjectKey, parameters);
+        return await ExecuteReadTransactionAsync(query, parameters);
     }
 
     /// <summary>
@@ -125,6 +125,36 @@ public class Neo4jDataAccess : INeo4jDataAccess
                 var records = await res.ToListAsync();
 
                 data = records.Select(x => (T)x.Values[returnObjectKey]).ToList();
+
+                return data;
+            });
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+    private async Task<List<Dictionary<string, object>>> ExecuteReadTransactionAsync(string query, IDictionary<string, object> parameters)
+    {
+        try
+        {
+            parameters = parameters ?? new Dictionary<string, object>();
+
+            var result = await _session.ExecuteReadAsync(async tx =>
+            {
+                var data = new List<Dictionary<string, object>>();
+
+                var res = await tx.RunAsync(query, parameters);
+
+                var records = await res.ToListAsync();
+
+                data = records.Select(record => record.Values.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value
+                )).ToList();
 
                 return data;
             });
