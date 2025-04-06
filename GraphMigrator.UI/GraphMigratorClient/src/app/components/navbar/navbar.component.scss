@@ -1,0 +1,20 @@
+.wrapper {
+    background: linear-gradient(to bottom, #121212, #1e1e1e);
+    color: #ffffff;
+    min-height: 100vh;
+
+    .toolbar{
+        background-color: black;
+        color: white;
+        .logo{
+            margin-right: 10px;
+        }
+    }
+    
+  }
+
+  .link-item {
+    &:hover{
+        text-decoration: underline;
+    }
+}
