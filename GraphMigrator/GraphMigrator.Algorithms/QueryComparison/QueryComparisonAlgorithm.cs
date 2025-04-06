@@ -18,7 +18,11 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
         _neo4JDataAccess = neo4JDataAccess;
     }
 
-    public async Task<QueryComparisonResult> CompareQueryResults(string sqlQuery, string cypherQuery, int? fractionalDigitsNumber = null)
+    public async Task<QueryComparisonResult> CompareQueryResults(
+        string sqlQuery,
+        string cypherQuery,
+        int? fractionalDigitsNumber = null,
+        int? resultsCountToReturn = null)
     {
         // Get SQL query results
         var sqlResults = await GetSqlResults(sqlQuery);
@@ -27,9 +31,10 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
         var neo4jResults = await GetNeo4jResults(cypherQuery);
 
         // Compare results
+        var resultsToReturn = resultsCountToReturn == null ? neo4jResults.Count : resultsCountToReturn.Value;
         var result = CompareResults(sqlResults, neo4jResults, fractionalDigitsNumber);
-        result.CypherResults = neo4jResults;
-        result.SqlResults = ConvertDataTableToList(sqlResults);
+        result.CypherResults = neo4jResults.Take(resultsToReturn).ToList();
+        result.SqlResults = ConvertDataTableToList(sqlResults, resultsToReturn);
 
         return result;
     }
@@ -137,7 +142,7 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
         if ((sqlValue is int || sqlValue is long || sqlValue is double || sqlValue is decimal || sqlValue is float) &&
             (neo4jValue is int || neo4jValue is long || neo4jValue is double || neo4jValue is decimal || neo4jValue is float))
         {
-            if(fractionalDigitsNumber == null)
+            if (fractionalDigitsNumber == null)
             {
                 return Convert.ToDecimal(sqlValue) == Convert.ToDecimal(neo4jValue);
             }
@@ -153,12 +158,12 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
         return sqlValue.ToString().Equals(neo4jValue.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
-    private static List<Dictionary<string, object>> ConvertDataTableToList(DataTable dataTable)
+    private static List<Dictionary<string, object>> ConvertDataTableToList(DataTable dataTable, int resultsToReturn)
     {
         var result = new List<Dictionary<string, object>>();
-
-        foreach (DataRow row in dataTable.Rows)
+        for (var i = 0; i < resultsToReturn; i++)
         {
+            var row = dataTable.Rows[i];
             var rowDictionary = new Dictionary<string, object>();
 
             foreach (DataColumn column in dataTable.Columns)

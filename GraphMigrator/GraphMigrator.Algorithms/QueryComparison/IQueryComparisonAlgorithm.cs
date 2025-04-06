@@ -4,6 +4,10 @@ namespace GraphMigrator.Algorithms.QueryComparison;
 
 public interface IQueryComparisonAlgorithm
 {
-    Task<QueryComparisonResult> CompareQueryResults(string sqlQuery, string cypherQuery, int? fractionalDigitsNumber = null);
+    Task<QueryComparisonResult> CompareQueryResults(
+        string sqlQuery,
+        string cypherQuery,
+        int? fractionalDigitsNumber = null,
+        int? resultsCountToReturn = null);
 }
 

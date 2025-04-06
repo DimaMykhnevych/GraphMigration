@@ -22,7 +22,8 @@ namespace GraphMigratorApi.Controllers
                 .CompareQueryResults(
                     getQueryComparisonResultDto.SqlQuery,
                     getQueryComparisonResultDto.CypherQuery,
-                    getQueryComparisonResultDto.FractionalDigitsNumber);
+                    getQueryComparisonResultDto.FractionalDigitsNumber,
+                    getQueryComparisonResultDto.ResultsCountToReturn);
 
             return Ok(result);
         }
