@@ -6,28 +6,26 @@
     </span>
   </h2>
 
-  <!-- Tabs Navigation -->
   <mat-tab-group
     mat-align-tabs="center"
     (selectedTabChange)="
       setActiveTab(
-        $event.tab.textLabel === 'SQL Results'
+        $event.tab.textLabel === sqlTabLabel
           ? 'sql'
-          : $event.tab.textLabel === 'Cypher Results'
+          : $event.tab.textLabel === cypherTabLabel
           ? 'cypher'
           : 'side-by-side'
       )
     "
   >
-    <mat-tab label="Side by Side">
-      <div class="row mt-3">
-        <!-- SQL Results -->
+    <mat-tab [label]="sideBySideTabLabel">
+      <div class="row mt-3 side-by-side-wrapper">
         <div class="col-md-6">
           <h3>SQL Results ({{ sqlResults.length }} rows)</h3>
           <div class="table-container">
             <table
               mat-table
-              [dataSource]="sqlResults"
+              [dataSource]="sqlDataSource"
               class="mat-elevation-z2 w-100"
             >
               <ng-container
@@ -53,7 +51,6 @@
                 *matRowDef="let row; columns: sqlDisplayedColumns"
               ></tr>
 
-              <!-- No data row -->
               <tr class="mat-row" *matNoDataRow>
                 <td
                   class="mat-cell text-center p-4"
@@ -64,15 +61,20 @@
               </tr>
             </table>
           </div>
+          <mat-paginator
+            #sideBySqlPaginator
+            [pageSizeOptions]="[5, 10, 25, 100]"
+            aria-label="Select page of SQL results"
+          >
+          </mat-paginator>
         </div>
 
-        <!-- Cypher Results -->
         <div class="col-md-6">
           <h3>Cypher Results ({{ cypherResults.length }} rows)</h3>
           <div class="table-container">
             <table
               mat-table
-              [dataSource]="cypherResults"
+              [dataSource]="cypherDataSource"
               class="mat-elevation-z2 w-100"
             >
               <ng-container
@@ -98,7 +100,6 @@
                 *matRowDef="let row; columns: cypherDisplayedColumns"
               ></tr>
 
-              <!-- No data row -->
               <tr class="mat-row" *matNoDataRow>
                 <td
                   class="mat-cell text-center p-4"
@@ -109,17 +110,23 @@
               </tr>
             </table>
           </div>
+          <mat-paginator
+            #sideByCypherPaginator
+            [pageSizeOptions]="[5, 10, 25, 100]"
+            aria-label="Select page of Cypher results"
+          >
+          </mat-paginator>
         </div>
       </div>
     </mat-tab>
 
-    <mat-tab label="SQL Results">
+    <mat-tab [label]="sqlTabLabel">
       <div class="mt-3">
         <h3>SQL Results ({{ sqlResults.length }} rows)</h3>
         <div class="table-container-full">
           <table
             mat-table
-            [dataSource]="sqlResults"
+            [dataSource]="sqlDataSource"
             class="mat-elevation-z2 w-100"
           >
             <ng-container
@@ -138,7 +145,6 @@
             ></tr>
             <tr mat-row *matRowDef="let row; columns: sqlDisplayedColumns"></tr>
 
-            <!-- No data row -->
             <tr class="mat-row" *matNoDataRow>
               <td
                 class="mat-cell text-center p-4"
@@ -149,16 +155,22 @@
             </tr>
           </table>
         </div>
+        <mat-paginator
+          #sqlPaginator
+          [pageSizeOptions]="[5, 10, 25, 100]"
+          aria-label="Select page of SQL results"
+        >
+        </mat-paginator>
       </div>
     </mat-tab>
 
-    <mat-tab label="Cypher Results">
+    <mat-tab [label]="cypherTabLabel">
       <div class="mt-3">
         <h3>Cypher Results ({{ cypherResults.length }} rows)</h3>
         <div class="table-container-full">
           <table
             mat-table
-            [dataSource]="cypherResults"
+            [dataSource]="cypherDataSource"
             class="mat-elevation-z2 w-100"
           >
             <ng-container
@@ -180,7 +192,6 @@
               *matRowDef="let row; columns: cypherDisplayedColumns"
             ></tr>
 
-            <!-- No data row -->
             <tr class="mat-row" *matNoDataRow>
               <td
                 class="mat-cell text-center p-4"
@@ -191,6 +202,12 @@
             </tr>
           </table>
         </div>
+        <mat-paginator
+          #cypherPaginator
+          [pageSizeOptions]="[5, 10, 25, 100]"
+          aria-label="Select page of Cypher results"
+        >
+        </mat-paginator>
       </div>
     </mat-tab>
   </mat-tab-group>

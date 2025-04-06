@@ -1,5 +1,5 @@
 <div class="main container">
-  <h1 class="text-center">SQL and Cypher Query Comparison Tool</h1>
+  <h1 class="text-center mb-4">SQL and Cypher Query Comparison Tool</h1>
 
   <div class="row">
     <div class="col-md-6 mb-3">
@@ -29,7 +29,7 @@
       </mat-card>
     </div>
 
-    <div class="col-md-6">
+    <div class="col-md-6 mb-3">
       <mat-card>
         <mat-card-header>
           <mat-card-title>Cypher Query</mat-card-title>
@@ -54,9 +54,12 @@
           </form>
         </mat-card-content>
       </mat-card>
+    </div>
+  </div>
 
-      <!-- Settings Card -->
-      <mat-card class="my-3">
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <mat-card>
         <mat-card-header>
           <mat-card-title>Comparison Settings</mat-card-title>
         </mat-card-header>
@@ -90,8 +93,7 @@
         </mat-card-content>
       </mat-card>
 
-      <!-- Run Button -->
-      <div class="text-center my-4">
+      <div class="text-center my-3">
         <button
           mat-raised-button
           color="primary"
@@ -107,19 +109,22 @@
           class="mt-2"
         ></mat-progress-bar>
       </div>
+    </div>
 
-      <!-- Results -->
+    <div class="col-md-6 mb-3">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Comparison Results</mat-card-title>
-          <button
-            mat-icon-button
-            color="warn"
-            (click)="clearResults()"
-            *ngIf="logMessages.length > 0"
+          <mat-card-title
+            >Results Comaprison
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="clearResults()"
+              *ngIf="logMessages.length > 0"
+            >
+              <mat-icon>clear</mat-icon>
+            </button></mat-card-title
           >
-            <mat-icon>clear</mat-icon>
-          </button>
         </mat-card-header>
         <mat-card-content>
           <div class="results-container">
@@ -143,8 +148,7 @@
     </div>
   </div>
 
-  <!-- Query Results Tables -->
-  <div class="row mt-4" *ngIf="comparisonResult">
+  <div class="row mt-2" *ngIf="comparisonResult">
     <div class="col-12">
       <app-query-results-table
         [sqlResults]="comparisonResult.sqlResults"

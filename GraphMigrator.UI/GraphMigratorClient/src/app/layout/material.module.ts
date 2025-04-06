@@ -23,6 +23,7 @@ import { MatTreeModule } from '@angular/material/tree';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatPaginatorModule } from '@angular/material/paginator';
 
 const MATERIAL_MODULES = [
   MatButtonModule,
@@ -49,6 +50,7 @@ const MATERIAL_MODULES = [
   MatProgressBarModule,
   MatSnackBarModule,
   MatTabsModule,
+  MatPaginatorModule,
 ];
 
 @NgModule({

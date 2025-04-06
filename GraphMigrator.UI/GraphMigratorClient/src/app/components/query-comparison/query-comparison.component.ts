@@ -94,7 +94,7 @@ export class QueryComparisonComponent implements OnInit {
       case 'success':
         return 'text-success';
       case 'warning':
-        return 'text-warning';
+        return 'text-warning-custom';
       case 'error':
         return 'text-danger';
       default:
