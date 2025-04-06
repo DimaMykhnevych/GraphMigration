@@ -103,11 +103,6 @@
         >
           <mat-icon>compare_arrows</mat-icon> Compare Queries
         </button>
-        <mat-progress-bar
-          mode="indeterminate"
-          *ngIf="isLoading"
-          class="mt-2"
-        ></mat-progress-bar>
       </div>
     </div>
 
@@ -145,6 +140,16 @@
           </div>
         </mat-card-content>
       </mat-card>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <mat-progress-bar
+        mode="indeterminate"
+        *ngIf="isLoading"
+        class="mt-2"
+      ></mat-progress-bar>
     </div>
   </div>
 
