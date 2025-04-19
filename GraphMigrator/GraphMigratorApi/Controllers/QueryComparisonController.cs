@@ -1,6 +1,8 @@
 ﻿using GraphMigrator.Algorithms.QueryComparison;
+using GraphMigrator.Domain.Configuration;
 using GraphMigratorApi.DTOs;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace GraphMigratorApi.Controllers
 {
@@ -9,10 +11,26 @@ namespace GraphMigratorApi.Controllers
     public class QueryComparisonController : ControllerBase
     {
         private readonly IQueryComparisonAlgorithm _queryComparisonAlgorithm;
+        private readonly TargetDatbaseNames _targetDatbaseNames;
 
-        public QueryComparisonController(IQueryComparisonAlgorithm queryComparisonAlgorithm)
+        public QueryComparisonController(
+            IQueryComparisonAlgorithm queryComparisonAlgorithm,
+            IOptions<TargetDatbaseNames> targetDatabaseNamesOptions)
         {
             _queryComparisonAlgorithm = queryComparisonAlgorithm;
+            _targetDatbaseNames = targetDatabaseNamesOptions.Value;
+        }
+
+        [HttpGet("GetTargetDatabaseNames")]
+        public IActionResult GetTargetDatabaseNames()
+        {
+            List<string> databaseNames = [
+                _targetDatbaseNames.Rel2Graph,
+                _targetDatbaseNames.Rel2GraphParallel,
+                _targetDatbaseNames.Improved,
+                ];
+
+            return Ok(databaseNames);
         }
 
         [HttpPost]
@@ -22,6 +40,7 @@ namespace GraphMigratorApi.Controllers
                 .CompareQueryResults(
                     getQueryComparisonResultDto.SqlQuery,
                     getQueryComparisonResultDto.CypherQuery,
+                    getQueryComparisonResultDto.TargetDatabaseName,
                     getQueryComparisonResultDto.FractionalDigitsNumber,
                     getQueryComparisonResultDto.ResultsCountToReturn);
 

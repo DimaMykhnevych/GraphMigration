@@ -16,6 +16,7 @@ export class QueryComparisonComponent implements OnInit {
   isLoading = false;
   comparisonResult: QueryComparisonResult | null = null;
   logMessages: LogMessage[] = [];
+  databaseNames: string[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -25,12 +26,18 @@ export class QueryComparisonComponent implements OnInit {
     this.queryForm = this.fb.group({
       sqlQuery: ['', Validators.required],
       cypherQuery: ['', Validators.required],
+      targetDatabaseName: ['', Validators.required],
       fractionalDigitsNumber: [null],
       resultsCountToReturn: [null],
     });
   }
 
-  public ngOnInit(): void {}
+  public ngOnInit(): void {
+    this.queryService.getTargetDatabaseNames().subscribe((result) => {
+      this.databaseNames = result;
+      this.queryForm.controls['targetDatabaseName'].setValue(result[0]);
+    });
+  }
 
   public compareQueries(): void {
     this.isLoading = true;

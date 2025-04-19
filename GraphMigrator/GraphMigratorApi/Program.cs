@@ -1,4 +1,3 @@
-using GraphMigrator.Algorithms.Neo4jDataLayer;
 using GraphMigrator.Algorithms.QueryComparison;
 using GraphMigrator.Domain.Configuration;
 using Neo4j.Driver;
@@ -10,12 +9,12 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddTransient<INeo4jDataAccess, Neo4jDataAccess>();
 builder.Services.AddTransient<IQueryComparisonAlgorithm, QueryComparisonAlgorithm>();
 
 // Configuration Options
 builder.Services.Configure<SourceDataSourceConfiguration>(builder.Configuration.GetSection(nameof(SourceDataSourceConfiguration)));
 builder.Services.Configure<TargetDataSourceConfiguration>(builder.Configuration.GetSection(nameof(TargetDataSourceConfiguration)));
+builder.Services.Configure<TargetDatbaseNames>(builder.Configuration.GetSection(nameof(TargetDatbaseNames)));
 
 var settings = new TargetDataSourceConfiguration();
 builder.Configuration.GetSection(nameof(TargetDataSourceConfiguration)).Bind(settings);

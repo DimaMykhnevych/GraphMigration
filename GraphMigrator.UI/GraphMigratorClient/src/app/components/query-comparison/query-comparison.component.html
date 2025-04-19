@@ -65,6 +65,20 @@
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="queryForm" class="row">
+            <div class="col-12 mb-2">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Target database</mat-label>
+                <mat-select formControlName="targetDatabaseName">
+                  <mat-option
+                    *ngFor="let database of databaseNames"
+                    [value]="database"
+                  >
+                    {{ database }}</mat-option
+                  >
+                </mat-select>
+                <mat-hint>The Neo4J target database name</mat-hint>
+              </mat-form-field>
+            </div>
             <div class="col-md-6">
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Fractional Digits to Compare</mat-label>

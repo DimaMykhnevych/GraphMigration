@@ -3,6 +3,7 @@ using GraphMigrator.Domain.Configuration;
 using GraphMigrator.Domain.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using Neo4j.Driver;
 using System.Data;
 
 namespace GraphMigrator.Algorithms.QueryComparison;
@@ -10,17 +11,18 @@ namespace GraphMigrator.Algorithms.QueryComparison;
 public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
 {
     private readonly SourceDataSourceConfiguration _configuration;
-    private readonly INeo4jDataAccess _neo4JDataAccess;
+    private readonly IDriver _neo4JDriver;
 
-    public QueryComparisonAlgorithm(IOptions<SourceDataSourceConfiguration> configurationOptions, INeo4jDataAccess neo4JDataAccess)
+    public QueryComparisonAlgorithm(IOptions<SourceDataSourceConfiguration> configurationOptions, IDriver neo4JDriver)
     {
         _configuration = configurationOptions.Value;
-        _neo4JDataAccess = neo4JDataAccess;
+        _neo4JDriver = neo4JDriver;
     }
 
     public async Task<QueryComparisonResult> CompareQueryResults(
         string sqlQuery,
         string cypherQuery,
+        string targetDatabaseName,
         int? fractionalDigitsNumber = null,
         int? resultsCountToReturn = null)
     {
@@ -28,7 +30,7 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
         var sqlResults = await GetSqlResults(sqlQuery);
 
         // Get Neo4j query results
-        var neo4jResults = await GetNeo4jResults(cypherQuery);
+        var neo4jResults = await GetNeo4jResults(cypherQuery, targetDatabaseName);
 
         // Compare results
         var resultsToReturn = resultsCountToReturn == null ? neo4jResults.Count : resultsCountToReturn.Value;
@@ -56,9 +58,10 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
         return dataTable;
     }
 
-    private async Task<List<Dictionary<string, object>>> GetNeo4jResults(string query)
+    private async Task<List<Dictionary<string, object>>> GetNeo4jResults(string query, string targetDatabaseName)
     {
-        return await _neo4JDataAccess.ExecuteReadDictionaryAsync(query);
+        var neo4JDataAccess = new Neo4jDataAccess(_neo4JDriver, targetDatabaseName);
+        return await neo4JDataAccess.ExecuteReadDictionaryAsync(query);
     }
 
     private static QueryComparisonResult CompareResults(DataTable sqlResults, IReadOnlyList<Dictionary<string, object>> neo4jResults, int? fractionalDigitsNumber)

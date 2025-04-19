@@ -3,18 +3,34 @@ using GraphMigrator.Algorithms.RelationalSchemaExtractors;
 using GraphMigrator.Domain.Configuration;
 using GraphMigrator.Domain.Entities;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Neo4j.Driver;
 
 namespace GraphMigrator.Algorithms.Rel2Graph;
 
-public class Rel2GraphAlgorithm(
-    IRelationalSchemaExtractor relationalSchemaExtractor,
-    IOptions<SourceDataSourceConfiguration> configurationOptions,
-    INeo4jDataAccess neo4JDataAccess) : IRel2GraphAlgorithm
+public class Rel2GraphAlgorithm : IRel2GraphAlgorithm
 {
-    private readonly IRelationalSchemaExtractor _relationalSchemaExtractor = relationalSchemaExtractor;
-    private readonly SourceDataSourceConfiguration configuration = configurationOptions.Value;
-    private readonly INeo4jDataAccess _neo4JDataAccess = neo4JDataAccess;
+    private readonly IRelationalSchemaExtractor _relationalSchemaExtractor;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly INeo4jDataAccess _neo4JDataAccess;
+    private readonly SourceDataSourceConfiguration configuration;
+    private readonly TargetDatbaseNames targetDatbaseNames;
+
+    public Rel2GraphAlgorithm(
+        IRelationalSchemaExtractor relationalSchemaExtractor,
+        IOptions<SourceDataSourceConfiguration> configurationOptions,
+        IOptions<TargetDatbaseNames> targetDatbaseNamesOptions,
+        IServiceProvider serviceProvider)
+    {
+        _relationalSchemaExtractor = relationalSchemaExtractor;
+        configuration = configurationOptions.Value;
+        targetDatbaseNames = targetDatbaseNamesOptions.Value;
+
+        _serviceProvider = serviceProvider;
+
+        _neo4JDataAccess = GetNeo4JDataAccess();
+    }
 
     public async Task MigrateToGraphDatabaseAsync()
     {
@@ -22,19 +38,22 @@ public class Rel2GraphAlgorithm(
 
         var (entityTables, relationshipTables) = ClassifyTables(schema);
 
-        await using var sqlConnection = new SqlConnection(configurationOptions.Value.ConnectionString);
+        await using var sqlConnection = new SqlConnection(configuration.ConnectionString);
         await sqlConnection.OpenAsync();
 
+        Console.WriteLine("Processing tables (creating nodes)");
         foreach (var table in entityTables)
         {
             await CreateNodesForTableAsync(sqlConnection, table);
         }
 
+        Console.WriteLine("Processing tables (creating relationships)");
         foreach (var table in relationshipTables)
         {
             await CreateRelationshipsFromLinkingTableAsync(sqlConnection, table);
         }
 
+        Console.WriteLine("Processing foreign keys (creating relationships)");
         foreach (var table in entityTables)
         {
             foreach (var foreignKey in table.ForeignKeys)
@@ -142,6 +161,12 @@ public class Rel2GraphAlgorithm(
                 targetId
             });
         }
+    }
+
+    private INeo4jDataAccess GetNeo4JDataAccess()
+    {
+        var neo4JDriver = _serviceProvider.GetRequiredService<IDriver>();
+        return new Neo4jDataAccess(neo4JDriver, targetDatbaseNames.Rel2Graph);
     }
 
     private static (List<TableSchema> EntityTables, List<TableSchema> RelationshipTables) ClassifyTables(RelationalDatabaseSchema schema)

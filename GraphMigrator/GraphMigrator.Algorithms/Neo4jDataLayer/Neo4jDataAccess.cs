@@ -1,6 +1,4 @@
-﻿using GraphMigrator.Domain.Configuration;
-using Microsoft.Extensions.Options;
-using Neo4j.Driver;
+﻿using Neo4j.Driver;
 
 namespace GraphMigrator.Algorithms.Neo4jDataLayer;
 
@@ -13,9 +11,9 @@ public class Neo4jDataAccess : INeo4jDataAccess
     /// <summary>
     /// Initializes a new instance of the <see cref="Neo4jDataAccess"/> class.
     /// </summary>
-    public Neo4jDataAccess(IDriver driver, IOptions<TargetDataSourceConfiguration> appSettingsOptions)
+    public Neo4jDataAccess(IDriver driver, string database)
     {
-        _database = appSettingsOptions.Value.Database ?? "neo4j";
+        _database = database ?? "neo4j";
         _session = driver.AsyncSession(o => o.WithDatabase(_database));
     }
 
@@ -91,15 +89,48 @@ public class Neo4jDataAccess : INeo4jDataAccess
         }
     }
 
-    public async Task DeleteSchemaWithData()
+    /// <summary>
+    /// Execute write transaction without result.
+    /// </summary>
+    public async Task ExecuteWriteTransactionAsync(string query, object parameters = null)
     {
-        var deleteQuery = "MATCH (n) DETACH DELETE n";
         try
         {
+            parameters = parameters == null ? new Dictionary<string, object>() : parameters;
+
             await _session.ExecuteWriteAsync(async tx =>
             {
-                await tx.RunAsync(deleteQuery, new Dictionary<string, object>());
+                await tx.RunAsync(query, parameters);
             });
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+    public async Task DeleteSchemaWithData()
+    {
+        var cypherQuery = @"
+            MATCH (n)
+            WITH n LIMIT 1000
+            DETACH DELETE n
+            RETURN COUNT(n) AS deletedCount";
+        try
+        {
+            bool hasMoreNodes;
+            do
+            {
+                var result = await _session.ExecuteWriteAsync(async tx =>
+                {
+                    var cursor = await tx.RunAsync(cypherQuery);
+                    var record = await cursor.SingleAsync();
+                    return record["deletedCount"].As<int>();
+                });
+
+                hasMoreNodes = result > 0;
+            }
+            while (hasMoreNodes);
         }
         catch (Exception ex)
         {

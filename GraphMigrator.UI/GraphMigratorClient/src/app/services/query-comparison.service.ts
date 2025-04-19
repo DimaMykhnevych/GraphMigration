@@ -19,4 +19,10 @@ export class QueryComparisonService {
       getParams
     );
   }
+
+  public getTargetDatabaseNames(): Observable<string[]> {
+    return this._http.get<string[]>(
+      `${AppSettings.apiHost}/QueryComparison/GetTargetDatabaseNames`
+    );
+  }
 }

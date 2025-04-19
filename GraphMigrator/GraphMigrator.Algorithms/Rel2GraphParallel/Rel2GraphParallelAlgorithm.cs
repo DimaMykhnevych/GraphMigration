@@ -6,6 +6,7 @@ using GraphMigrator.Domain.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Neo4j.Driver;
 
 namespace GraphMigrator.Algorithms.Rel2GraphParallel;
 
@@ -13,6 +14,7 @@ public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
 {
     private readonly IRelationalSchemaExtractor _relationalSchemaExtractor;
     private readonly SourceDataSourceConfiguration _configuration;
+    private readonly TargetDatbaseNames _targetDatbaseNames;
     private readonly IServiceProvider _serviceProvider;
     private readonly SemaphoreSlim _dbConnectionSemaphore;
     private readonly SemaphoreSlim _neo4jWriteSemaphore;
@@ -23,10 +25,12 @@ public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
     public Rel2GraphParallelAlgorithm(
         IRelationalSchemaExtractor relationalSchemaExtractor,
         IOptions<SourceDataSourceConfiguration> configurationOptions,
+        IOptions<TargetDatbaseNames> targetDatbaseNames,
         IServiceProvider serviceProvider)
     {
         _relationalSchemaExtractor = relationalSchemaExtractor;
         _configuration = configurationOptions.Value;
+        _targetDatbaseNames = targetDatbaseNames.Value;
         _serviceProvider = serviceProvider;
 
         _maxConcurrentDbConnections = Environment.ProcessorCount * 2;
@@ -42,8 +46,13 @@ public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
         var schema = await _relationalSchemaExtractor.GetSchema();
         var (entityTables, relationshipTables) = ClassifyTables(schema);
 
+        Console.WriteLine("Creating indexes");
+        await CreateIndexesForRelationships(entityTables, cancellationToken);
+
+        Console.WriteLine("Processing tables (creating nodes)");
         await ProcessTablesInParallel(entityTables, CreateNodesForTableAsync, cancellationToken);
 
+        Console.WriteLine("Processing tables (creating relationships)");
         await ProcessTablesInParallel(relationshipTables, CreateRelationshipsFromLinkingTableAsync, cancellationToken);
 
         var foreignKeyPairs = entityTables
@@ -54,6 +63,7 @@ public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
             }))
         .ToList();
 
+        Console.WriteLine("Processing foreign keys (creating relationships)");
         await ProcessForeignKeysInParallel(foreignKeyPairs, cancellationToken);
     }
 
@@ -203,7 +213,7 @@ public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
         {
             await _neo4jWriteSemaphore.WaitAsync(cancellationToken);
 
-            var neo4JDataAccess = _serviceProvider.GetRequiredService<INeo4jDataAccess>();
+            var neo4JDataAccess = GetNeo4JDataAccess();
 
             var cypher = $@"
                 UNWIND $items AS item
@@ -292,7 +302,7 @@ public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
         {
             await _neo4jWriteSemaphore.WaitAsync(cancellationToken);
 
-            var neo4JDataAccess = _serviceProvider.GetRequiredService<INeo4jDataAccess>();
+            var neo4JDataAccess = GetNeo4JDataAccess();
 
             var cypher = $@"
                 UNWIND $items AS item
@@ -380,7 +390,7 @@ public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
         {
             await _neo4jWriteSemaphore.WaitAsync(cancellationToken);
 
-            var neo4JDataAccess = _serviceProvider.GetRequiredService<INeo4jDataAccess>();
+            var neo4JDataAccess = GetNeo4JDataAccess();
 
             var relationshipType = $"HAS_{fk.ReferencedTableName}_{tableName}";
 
@@ -406,6 +416,26 @@ public class Rel2GraphParallelAlgorithm : IRel2GraphParallelAlgorithm
         {
             _neo4jWriteSemaphore.Release();
         }
+    }
+
+    private async Task CreateIndexesForRelationships(List<TableSchema> entityTables, CancellationToken cancellationToken)
+    {
+        var neo4JDataAccess = GetNeo4JDataAccess();
+
+        foreach (var table in entityTables)
+        {
+            foreach (var pk in table.PrimaryKeys)
+            {
+                var cypher = $"CREATE INDEX IF NOT EXISTS FOR (n:{table.Name}) ON (n.{pk})";
+                await neo4JDataAccess.ExecuteWriteTransactionAsync(cypher, null);
+            }
+        }
+    }
+
+    private INeo4jDataAccess GetNeo4JDataAccess()
+    {
+        var neo4JDriver = _serviceProvider.GetRequiredService<IDriver>();
+        return new Neo4jDataAccess(neo4JDriver, _targetDatbaseNames.Rel2GraphParallel);
     }
 
     private static (List<TableSchema> EntityTables, List<TableSchema> RelationshipTables) ClassifyTables(RelationalDatabaseSchema schema)

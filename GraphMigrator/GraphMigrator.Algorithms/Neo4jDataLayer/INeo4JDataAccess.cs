@@ -10,5 +10,7 @@ public interface INeo4jDataAccess : IAsyncDisposable
 
     Task<T> ExecuteWriteTransactionAsync<T>(string query, object parameters = null);
 
+    Task ExecuteWriteTransactionAsync(string query, object parameters = null);
+
     Task DeleteSchemaWithData();
 }

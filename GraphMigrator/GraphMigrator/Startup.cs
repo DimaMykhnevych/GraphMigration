@@ -1,5 +1,4 @@
 ﻿using GraphMigrator.Algorithms.ImprovedMigrationAlgorithmN;
-using GraphMigrator.Algorithms.Neo4jDataLayer;
 using GraphMigrator.Algorithms.QueryComparison;
 using GraphMigrator.Algorithms.Rel2Graph;
 using GraphMigrator.Algorithms.Rel2GraphParallel;
@@ -21,19 +20,17 @@ public class Startup(IConfiguration configuration)
 
         services.AddTransient<IRelationalSchemaExtractor, MSSQLExtractor>();
 
-        services.AddTransient<INeo4jDataAccess, Neo4jDataAccess>();
-
         services.AddTransient<IImprovedMigrationAlgorithm, ImprovedMigrationAlgorithm>();
 
         services.AddTransient<IRel2GraphAlgorithm, Rel2GraphAlgorithm>();
 
         services.AddTransient<IRel2GraphParallelAlgorithm, Rel2GraphParallelAlgorithm>();
 
-        services.AddTransient<IQueryComparisonAlgorithm, QueryComparisonAlgorithm>();
-
         // Configuration Options
         services.Configure<SourceDataSourceConfiguration>(Configuration.GetSection(nameof(SourceDataSourceConfiguration)));
         services.Configure<TargetDataSourceConfiguration>(Configuration.GetSection(nameof(TargetDataSourceConfiguration)));
+        services.Configure<ImprovedAlgorithmSettings>(Configuration.GetSection(nameof(ImprovedAlgorithmSettings)));
+        services.Configure<TargetDatbaseNames>(Configuration.GetSection(nameof(TargetDatbaseNames)));
 
         // Fetch settings object from configuration
         var settings = new TargetDataSourceConfiguration();
