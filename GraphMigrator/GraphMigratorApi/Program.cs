@@ -10,6 +10,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddTransient<IQueryComparisonAlgorithm, QueryComparisonAlgorithm>();
+builder.Services.AddTransient<IEnhancedQueryComparisonAlgorithm, EnhancedQueryComparisonAlgorithm>();
 
 // Configuration Options
 builder.Services.Configure<SourceDataSourceConfiguration>(builder.Configuration.GetSection(nameof(SourceDataSourceConfiguration)));

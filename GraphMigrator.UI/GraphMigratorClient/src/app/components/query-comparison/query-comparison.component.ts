@@ -3,8 +3,8 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { QueryComparisonService } from '../../services/query-comparison.service';
 import { finalize } from 'rxjs/operators';
-import { QueryComparisonResult } from 'src/app/models/query-comparison-result';
 import { LogMessage } from 'src/app/models/log-message';
+import { EnhancedQueryComparisonResult } from 'src/app/models/enhanced-query-comparison-result';
 
 @Component({
   selector: 'app-query-comparison',
@@ -14,7 +14,7 @@ import { LogMessage } from 'src/app/models/log-message';
 export class QueryComparisonComponent implements OnInit {
   queryForm: FormGroup;
   isLoading = false;
-  comparisonResult: QueryComparisonResult | null = null;
+  comparisonResult: EnhancedQueryComparisonResult | null = null;
   logMessages: LogMessage[] = [];
   databaseNames: string[] = [];
 
@@ -28,7 +28,7 @@ export class QueryComparisonComponent implements OnInit {
       cypherQuery: ['', Validators.required],
       targetDatabaseName: ['', Validators.required],
       fractionalDigitsNumber: [null],
-      resultsCountToReturn: [null],
+      resultsCountToReturn: [100],
     });
   }
 

@@ -10,11 +10,11 @@ namespace GraphMigratorApi.Controllers
     [ApiController]
     public class QueryComparisonController : ControllerBase
     {
-        private readonly IQueryComparisonAlgorithm _queryComparisonAlgorithm;
+        private readonly IEnhancedQueryComparisonAlgorithm _queryComparisonAlgorithm;
         private readonly TargetDatbaseNames _targetDatbaseNames;
 
         public QueryComparisonController(
-            IQueryComparisonAlgorithm queryComparisonAlgorithm,
+            IEnhancedQueryComparisonAlgorithm queryComparisonAlgorithm,
             IOptions<TargetDatbaseNames> targetDatabaseNamesOptions)
         {
             _queryComparisonAlgorithm = queryComparisonAlgorithm;
@@ -37,7 +37,7 @@ namespace GraphMigratorApi.Controllers
         public async Task<IActionResult> GetQueryComparisonResult([FromBody]GetQueryComparisonResultDto getQueryComparisonResultDto)
         {
             var result = await _queryComparisonAlgorithm
-                .CompareQueryResults(
+                .CompareQueryResultsWithPerformanceMetrics(
                     getQueryComparisonResultDto.SqlQuery,
                     getQueryComparisonResultDto.CypherQuery,
                     getQueryComparisonResultDto.TargetDatabaseName,

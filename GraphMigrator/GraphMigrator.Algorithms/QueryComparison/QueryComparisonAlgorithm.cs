@@ -33,7 +33,7 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
         var neo4jResults = await GetNeo4jResults(cypherQuery, targetDatabaseName);
 
         // Compare results
-        var resultsToReturn = resultsCountToReturn == null ? neo4jResults.Count : resultsCountToReturn.Value;
+        var resultsToReturn = resultsCountToReturn == null ? sqlResults.Rows.Count : resultsCountToReturn.Value;
         var result = CompareResults(sqlResults, neo4jResults, fractionalDigitsNumber);
         result.CypherResults = neo4jResults.Take(resultsToReturn).ToList();
         result.SqlResults = ConvertDataTableToList(sqlResults, resultsToReturn);
