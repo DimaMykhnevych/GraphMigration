@@ -36,7 +36,7 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
         var resultsToReturn = resultsCountToReturn == null
             ? sqlResults.Rows.Count
             : sqlResults.Rows.Count > resultsCountToReturn.Value
-                ? resultsCountToReturn.Value 
+                ? resultsCountToReturn.Value
                 : sqlResults.Rows.Count;
         var result = CompareResults(sqlResults, neo4jResults, fractionalDigitsNumber);
         result.CypherResults = neo4jResults.Take(resultsToReturn).ToList();
@@ -159,7 +159,12 @@ public class QueryComparisonAlgorithm : IQueryComparisonAlgorithm
             decimal roundedNeo4jValue = Math.Round(Convert.ToDecimal(neo4jValue), fractionalDigitsNumber.Value);
 
             return roundedSqlValue == roundedNeo4jValue;
+        }
 
+
+        if ((sqlValue is DateTime sqlDateTime) && (neo4jValue is LocalDateTime neo4JLocal))
+        {
+            return sqlDateTime == neo4JLocal.ToDateTime();
         }
 
         return sqlValue.ToString().Equals(neo4jValue.ToString(), StringComparison.OrdinalIgnoreCase);
