@@ -13,6 +13,7 @@ import { ChartDataItem } from 'src/app/models/chart-data-item';
   styleUrls: ['./query-comparison.component.scss'],
 })
 export class QueryComparisonComponent implements OnInit {
+  showCharts: boolean = true;
   queryForm: FormGroup;
   isLoading = false;
   comparisonResult: EnhancedQueryComparisonResult | null = null;
@@ -25,14 +26,8 @@ export class QueryComparisonComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {
     this.queryForm = this.fb.group({
-      sqlQuery: [
-        'SELECT p.Product_name, p.Product_price, p.Description FROM [Product] p WHERE p.Product_Id = 123;',
-        Validators.required,
-      ],
-      cypherQuery: [
-        'MATCH (p:Product {Product_Id: 123}) RETURN p.Product_name AS Product_name, p.Product_price AS Product_price, p.Description AS Description;',
-        Validators.required,
-      ],
+      sqlQuery: ['', Validators.required],
+      cypherQuery: ['', Validators.required],
       targetDatabaseName: ['', Validators.required],
       fractionalDigitsNumber: [null],
       resultsCountToReturn: [100],
