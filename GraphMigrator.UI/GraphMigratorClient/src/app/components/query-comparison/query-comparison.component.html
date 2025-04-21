@@ -192,11 +192,11 @@
                 MB)
               </p>
               <p>
-                CPU usage (%):
+                CPU Usage (%):
                 {{ comparisonResult.sqlPerformanceMetrics.cpuPercentage }}
               </p>
               <p>
-                Database hits:
+                Database Hits:
                 {{ comparisonResult.sqlPerformanceMetrics.databaseHits }}
               </p>
             </div>
@@ -217,16 +217,43 @@
                 MB)
               </p>
               <p>
-                CPU usage (%):
+                CPU Usage (%):
                 {{ comparisonResult.neo4jPerformanceMetrics.cpuPercentage }}
               </p>
               <p>
-                Database hits:
+                Database Hits:
                 {{ comparisonResult.neo4jPerformanceMetrics.databaseHits }}
               </p>
             </div>
-          </div></mat-card-content
-        >
+            <div class="col-6 col-md-6 col-sm-6">
+              <app-bar-chart
+                [data]="getChartData('time')"
+                xAxisLabel="Database"
+                yAxisLabel="Execution Time (ms)"
+              ></app-bar-chart>
+            </div>
+            <div class="col-6 col-md-6 col-sm-6">
+              <app-bar-chart
+                [data]="getChartData('memory')"
+                xAxisLabel="Database"
+                yAxisLabel="Memory Usage (mb)"
+              ></app-bar-chart>
+            </div>
+            <div class="col-6 col-md-6 col-sm-6">
+              <app-bar-chart
+                [data]="getChartData('cpu')"
+                xAxisLabel="Database"
+                yAxisLabel="CPU Usage (%)"
+              ></app-bar-chart>
+            </div>
+            <div class="col-6 col-md-6 col-sm-6">
+              <app-bar-chart
+                [data]="getChartData('dbHits')"
+                xAxisLabel="Database"
+                yAxisLabel="Database Hits"
+              ></app-bar-chart>
+            </div></div
+        ></mat-card-content>
       </mat-card>
     </div>
     <div class="col-12">

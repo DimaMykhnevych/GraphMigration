@@ -5,6 +5,7 @@ import { QueryComparisonService } from '../../services/query-comparison.service'
 import { finalize } from 'rxjs/operators';
 import { LogMessage } from 'src/app/models/log-message';
 import { EnhancedQueryComparisonResult } from 'src/app/models/enhanced-query-comparison-result';
+import { ChartDataItem } from 'src/app/models/chart-data-item';
 
 @Component({
   selector: 'app-query-comparison',
@@ -24,8 +25,14 @@ export class QueryComparisonComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {
     this.queryForm = this.fb.group({
-      sqlQuery: ['', Validators.required],
-      cypherQuery: ['', Validators.required],
+      sqlQuery: [
+        'SELECT p.Product_name, p.Product_price, p.Description FROM [Product] p WHERE p.Product_Id = 123;',
+        Validators.required,
+      ],
+      cypherQuery: [
+        'MATCH (p:Product {Product_Id: 123}) RETURN p.Product_name AS Product_name, p.Product_price AS Product_price, p.Description AS Description;',
+        Validators.required,
+      ],
       targetDatabaseName: ['', Validators.required],
       fractionalDigitsNumber: [null],
       resultsCountToReturn: [100],
@@ -87,6 +94,67 @@ export class QueryComparisonComponent implements OnInit {
           });
         },
       });
+  }
+
+  public getChartData(metric: string): ChartDataItem[] {
+    switch (metric) {
+      case 'time':
+        return [
+          {
+            name: 'MSSQL',
+            value: this.comparisonResult!.sqlPerformanceMetrics.executionTimeMs,
+          },
+          {
+            name: `Neo4J (${this.queryForm.controls['targetDatabaseName'].value})`,
+            value:
+              this.comparisonResult!.neo4jPerformanceMetrics.executionTimeMs,
+          },
+        ];
+
+      case 'memory':
+        return [
+          {
+            name: 'MSSQL',
+            value:
+              this.comparisonResult!.sqlPerformanceMetrics.memoryUsageBytes /
+              1024 /
+              1024,
+          },
+          {
+            name: `Neo4J (${this.queryForm.controls['targetDatabaseName'].value})`,
+            value:
+              this.comparisonResult!.neo4jPerformanceMetrics.memoryUsageBytes /
+              1024 /
+              1024,
+          },
+        ];
+
+      case 'cpu':
+        return [
+          {
+            name: 'MSSQL',
+            value: this.comparisonResult!.sqlPerformanceMetrics.cpuPercentage,
+          },
+          {
+            name: `Neo4J (${this.queryForm.controls['targetDatabaseName'].value})`,
+            value: this.comparisonResult!.neo4jPerformanceMetrics.cpuPercentage,
+          },
+        ];
+
+      case 'dbHits':
+        return [
+          {
+            name: 'MSSQL',
+            value: this.comparisonResult!.sqlPerformanceMetrics.databaseHits,
+          },
+          {
+            name: `Neo4J (${this.queryForm.controls['targetDatabaseName'].value})`,
+            value: this.comparisonResult!.neo4jPerformanceMetrics.databaseHits,
+          },
+        ];
+    }
+
+    return [];
   }
 
   public clearResults(): void {

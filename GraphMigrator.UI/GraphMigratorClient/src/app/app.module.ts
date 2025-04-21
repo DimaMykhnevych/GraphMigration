@@ -8,10 +8,12 @@ import { MaterialModule } from './layout';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
+import { NgxChartsModule } from '@swimlane/ngx-charts';
 
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { QueryComparisonComponent } from './components/query-comparison/query-comparison.component';
 import { QueryResultsTableComponent } from './components/query-results-table/query-results-table.component';
+import { BarChartComponent } from './components/bar-chart/bar-chart.component';
 
 @NgModule({
   declarations: [
@@ -19,6 +21,7 @@ import { QueryResultsTableComponent } from './components/query-results-table/que
     NavbarComponent,
     QueryComparisonComponent,
     QueryResultsTableComponent,
+    BarChartComponent,
   ],
   imports: [
     BrowserModule,
@@ -28,6 +31,7 @@ import { QueryResultsTableComponent } from './components/query-results-table/que
     MaterialModule,
     ReactiveFormsModule,
     HttpClientModule,
+    NgxChartsModule,
   ],
   providers: [],
   bootstrap: [AppComponent],
