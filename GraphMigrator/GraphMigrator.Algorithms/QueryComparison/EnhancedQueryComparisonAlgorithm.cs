@@ -3,7 +3,6 @@ using GraphMigrator.Domain.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
-using System;
 using System.Data;
 using System.Diagnostics;
 
@@ -59,11 +58,7 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
     private async Task<SqlPerformanceMetrics> GetSqlPerformanceMetrics(string query)
     {
         var metrics = new SqlPerformanceMetrics();
-        var stopwatch = new Stopwatch();
         var process = Process.GetCurrentProcess();
-
-        using var ramCounter = new PerformanceCounter("Process", "Working Set - Private", process.ProcessName);
-        float initialRamBytes = ramCounter.NextValue();
 
         using var cpuCounter = new PerformanceCounter("Process", "% Processor Time", process.ProcessName);
         cpuCounter.NextValue();
@@ -78,13 +73,14 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
 
         string ioStatsQuery = @"
         SELECT 
-            SUM(s.total_logical_reads) AS total_logical_reads,
-            SUM(s.total_physical_reads) AS total_physical_reads
+            s.total_logical_reads AS total_logical_reads,
+            s.total_physical_reads AS total_physical_reads,
+            s.last_used_grant_kb AS last_used_grant_kb,
+            s.last_elapsed_time AS last_elapsed_time
         FROM sys.dm_exec_query_stats AS s
         CROSS APPLY sys.dm_exec_sql_text(s.sql_handle) AS t
         WHERE t.text LIKE @QueryPattern
         AND s.last_execution_time > DATEADD(SECOND, -30, GETDATE())";
-        stopwatch.Start();
 
         using var command = new SqlCommand(query, connection);
         command.CommandTimeout = 300;
@@ -93,11 +89,11 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
         var dataTable = new DataTable();
         dataTable.Load(reader);
 
-        stopwatch.Stop();
         try
         {
             using var statsCommand = new SqlCommand(ioStatsQuery, connection);
-            statsCommand.Parameters.AddWithValue("@QueryPattern", $"%{query.Replace("'", "''")}%");
+            var replacedQuery = query.Split("\n").First().Replace("'", "''");
+            statsCommand.Parameters.AddWithValue("@QueryPattern", $"%{replacedQuery}%");
 
             using var statsReader = await statsCommand.ExecuteReaderAsync();
             if (await statsReader.ReadAsync())
@@ -109,6 +105,15 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
                     Convert.ToInt32(statsReader["total_physical_reads"]) : 0;
 
                 metrics.DatabaseHits = logicalReads + physicalReads;
+
+                var kbMemory = statsReader["last_used_grant_kb"] != DBNull.Value ?
+                    Convert.ToInt32(statsReader["last_used_grant_kb"]) : 0;
+                metrics.MemoryUsageBytes = kbMemory * 1000;
+
+                var timeInMicroseconds = statsReader["last_elapsed_time"] != DBNull.Value ?
+                    Convert.ToInt32(statsReader["last_elapsed_time"]) : 0;
+
+                metrics.ExecutionTimeMs = timeInMicroseconds / 1000;
             }
         }
         catch (SqlException ex)
@@ -122,13 +127,8 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
 
         // Calculate CPU usage
         double cpuPercentage = cpuCounter.NextValue() / Environment.ProcessorCount;
-        var elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-
-        float finalRamBytes = ramCounter.NextValue();
 
         // Calculate metrics
-        metrics.ExecutionTimeMs = stopwatch.ElapsedMilliseconds;
-        metrics.MemoryUsageBytes = (long)Math.Abs(Math.Round(finalRamBytes - initialRamBytes, 2));
         metrics.CpuPercentage = Math.Round(cpuPercentage, 2);
 
         // If we couldn't get DB hits from DMVs, try to get via another approach
@@ -153,6 +153,18 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
             }
         }
 
+        try
+        {
+            //using var cleanStatistics = new SqlCommand("DBCC FREEPROCCACHE; DBCC DROPCLEANBUFFERS", connection);
+            //cleanStatistics.CommandTimeout = 300;
+
+            //await cleanStatistics.ExecuteReaderAsync();
+        }
+        catch (Exception)
+        {
+            // Handle exception
+        }
+
         return metrics;
     }
 
@@ -164,8 +176,6 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
         try
         {
             var process = Process.GetCurrentProcess();
-            using var ramCounter = new PerformanceCounter("Process", "Working Set - Private", process.ProcessName);
-            float initialRamBytes = ramCounter.NextValue();
 
             using var cpuCounter = new PerformanceCounter("Process", "% Processor Time", process.ProcessName);
             cpuCounter.NextValue();
@@ -185,13 +195,30 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
                                 summary.Counters.RelationshipsDeleted +
                                 summary.Counters.PropertiesSet;
 
+            metrics.DatabaseHits += GetDbHist(summary.Plan);
+
             // Extract execution time directly from the summary
             metrics.ExecutionTimeMs = (long)(summary.ResultAvailableAfter + summary.ResultConsumedAfter).TotalMilliseconds;
 
-            float finalRamBytes = ramCounter.NextValue();
-
             // Extract memory usage from profile results if available
-            metrics.MemoryUsageBytes = (long)Math.Abs(Math.Round(finalRamBytes - initialRamBytes, 2));
+            var profileInfo = new Dictionary<string, object>();
+            var plan = summary.Plan;
+            if (plan != null)
+            {
+                // Extract memory information from the plan
+                ExtractMemoryInfoFromPlan(plan, profileInfo);
+
+                // Sum up memory usage across all operators
+                long totalMemoryBytes = 0;
+                foreach (var key in profileInfo.Keys.Where(k => k.Contains("memory") || k.Contains("Memory")))
+                {
+                    if (profileInfo[key] is long memBytes)
+                    {
+                        totalMemoryBytes += memBytes;
+                    }
+                }
+                metrics.MemoryUsageBytes = totalMemoryBytes;
+            }
 
             // Store additional Neo4j specific metrics
             metrics.ProfileInfo = new Dictionary<string, object>
@@ -221,5 +248,43 @@ public class EnhancedQueryComparisonAlgorithm : IEnhancedQueryComparisonAlgorith
         }
 
         return metrics;
+    }
+
+    private void ExtractMemoryInfoFromPlan(IPlan plan, Dictionary<string, object> profileInfo)
+    {
+        if (plan == null) return;
+
+        // Extract memory information from plan arguments
+        foreach (var arg in plan.Arguments)
+        {
+            if (arg.Key.Contains("memory") || arg.Key.Contains("Memory"))
+            {
+                profileInfo[arg.Key] = arg.Value;
+            }
+        }
+
+        // Recursively process child plans
+        foreach (var child in plan.Children)
+        {
+            ExtractMemoryInfoFromPlan(child, profileInfo);
+        }
+    }
+
+    private long GetDbHist(IPlan plan, long counter = 0)
+    {
+        var childrenCount = plan.Children.Count;
+        if (childrenCount == 0)
+        {
+            return counter;
+        }
+
+        foreach (var child in plan.Children)
+        {
+            var profiledPlan = child as IProfiledPlan;
+            counter += profiledPlan?.DbHits ?? 0;
+            counter = GetDbHist(child, counter);
+        }
+
+        return counter;
     }
 }
